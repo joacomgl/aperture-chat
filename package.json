@@ -1,20 +1,19 @@
 {
   "name": "aperture-chat",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "directories": {
-    "test": "tests"
-  },
+  "description": "SPA para interactuar con GLaDOS usando Gemini AI",
+  "main": "src/app.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vercel dev",
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "devDependencies": {
-    "vercel": "^54.11.1",
-    "vitest": "^4.1.8"
+    "vercel": "^34.0.0",
+    "vitest": "^1.6.0"
   }
 }
