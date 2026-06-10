@@ -25,8 +25,9 @@ export default async function handler(req, res) {
     };
 
     try {
-        // Endpoint oficial de Google Gemini API
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+        // ACTUALIZADO: Apuntamos al modelo gemini-2.5-flash (el estándar actual y ultra rápido)
+        // usando la versión v1beta de la API oficial
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
         // Filtrar el historial para asegurar que SOLO viajen roles válidos para Gemini ('user' o 'model')
         const cleanedContents = contents.filter(msg => msg.role === 'user' || msg.role === 'model');
