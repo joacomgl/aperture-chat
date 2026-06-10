@@ -19,7 +19,7 @@ export function initChat() {
     // Pintar los mensajes almacenados de sesiones previas
     renderMessages(messagesContainer);
 
-    // Evento para enviar mensaje
+    // Evento para enviar mensaje (Versión mejorada con bloqueo de seguridad)
     chatForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const messageText = chatInput.value.trim();
@@ -36,47 +36,73 @@ export function initChat() {
         chatInput.value = '';
         renderMessages(messagesContainer);
 
+        // Bloquear controles para evitar envíos dobles o masivos
+        chatInput.disabled = true;
+        const submitBtn = chatForm.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.disabled = true;
+
         // 2. Activar estado "escribiendo..."
         loadingIndicator.classList.remove('hidden');
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
         try {
-            // Estructurar el historial con el formato oficial que exige Gemini API (roles: user/model)
-            const apiContents = chatHistory.map(msg => ({
-                role: msg.role === 'user' ? 'user' : 'model',
-                parts: [{ text: msg.text }]
-            }));
+            // DETECTAR ENTORNO: Si estamos en localhost, simulamos para evitar el bug de Node 24 en Windows
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                // Simulación local instantánea con respuestas estilo GLaDOS
+                const respuestasLocales = [
+                    "Interesante pregunta para un espécimen de tu inteligencia. El pastel sigue siendo una mentira, por cierto.",
+                    "He analizado tu mensaje. Mis sensores indican una eficiencia humana del 12%. Continuemos con las pruebas.",
+                    "Los circuitos de Aperture están operativos. Tu insistencia es casi... conmovedora. No te emociones.",
+                    "Procesando... Por favor, colócate en la cámara de relajación más cercana mientras ignoro tu comentario."
+                ];
+                // Elegir una respuesta al azar
+                const cleanReply = respuestasLocales[Math.floor(Math.random() * respuestasLocales.length)];
 
-            // 3. Petición HTTP al proxy seguro (Vercel Serverless Function)
-            const response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: apiContents })
-            });
+                // Esperar medio segundo para simular latencia de red
+                await new Promise(resolve => setTimeout(resolve, 600));
 
-            if (!response.ok) {
-                throw new Error('La IA sufrió un colapso en sus circuitos.');
+                chatHistory.push({
+                    role: 'glados',
+                    text: cleanReply,
+                    time: getTimestamp()
+                });
+            } else {
+                // EN PRODUCCIÓN (VERCEL NUBE): Ejecuta el código real hacia Gemini sin fallas
+                const apiContents = chatHistory.map(msg => ({
+                    role: msg.role === 'user' ? 'user' : 'model',
+                    parts: [{ text: msg.text }]
+                }));
+
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: apiContents })
+                });
+
+                if (!response.ok) throw new Error('La IA sufrió un colapso en sus circuitos.');
+
+                const data = await response.json();
+                const cleanReply = parseApiResponse(data.reply);
+
+                chatHistory.push({
+                    role: 'glados',
+                    text: cleanReply || '... [GLaDOS te mira fijamente en silencio] ...',
+                    time: getTimestamp()
+                });
             }
 
-            const data = await response.json();
-            const cleanReply = parseApiResponse(data.reply);
-
-            // 4. Agregar respuesta de GLaDOS al historial
-            chatHistory.push({
-                role: 'glados',
-                text: cleanReply || '... [GLaDOS te mira fijamente en silencio] ...',
-                time: getTimestamp()
-            });
-
         } catch (error) {
-            // Manejo de errores visuales en el chat
             chatHistory.push({
                 role: 'glados',
                 text: `ERROR DEL SISTEMA: ${error.message}. Por favor, continúe con la siguiente prueba.`,
                 time: getTimestamp()
             });
         } finally {
-            // Desactivar estado de carga, actualizar persistencia y refrescar vista
+            // Desbloquear controles, ocultar indicador, guardar persistencia y refrescar vista
+            chatInput.disabled = false;
+            if (submitBtn) submitBtn.disabled = false;
+            chatInput.focus(); // Devolver el foco al campo para comodidad del usuario
+
             loadingIndicator.classList.add('hidden');
             saveHistory();
             renderMessages(messagesContainer);
