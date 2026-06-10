@@ -179,4 +179,5 @@ function renderMessages(container) {
  * Guarda el estado del historial actual en localStorage.
  */
 function saveHistory() {
-    localStorage.setItem('aperture_chat_history', JSON.stringify(chatHistory
+    localStorage.setItem('aperture_chat_history', JSON.stringify(chatHistory));
+}
