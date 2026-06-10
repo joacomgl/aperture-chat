@@ -66,7 +66,7 @@ export function initChat() {
                     text: cleanReply,
                     time: getTimestamp()
                 });
-            } else {
+            } else { 
                 // EN PRODUCCIÓN (VERCEL NUBE): Ejecuta el código real hacia Gemini sin fallas
                 const apiContents = chatHistory.map(msg => ({
                     role: msg.role === 'user' ? 'user' : 'model',
@@ -79,10 +79,22 @@ export function initChat() {
                     body: JSON.stringify({ contents: apiContents })
                 });
 
-                if (!response.ok) throw new Error('La IA sufrió un colapso en sus circuitos.');
+                // Si Vercel devuelve un error (ej: 400, 404, 500), leemos el JSON para saber qué pasó
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    const mensajeError = errorData.error || 'La IA sufrió un colapso en sus circuitos.';
+                    throw new Error(mensajeError);
+                }
 
                 const data = await response.json();
-                const cleanReply = parseApiResponse(data.reply);
+                
+                // Validamos: si parseApiResponse falla o no existe, usamos directamente data.reply
+                let cleanReply = '';
+                try {
+                    cleanReply = parseApiResponse(data.reply);
+                } catch (e) {
+                    cleanReply = data.reply;
+                }
 
                 chatHistory.push({
                     role: 'glados',
@@ -91,23 +103,22 @@ export function initChat() {
                 });
             }
 
-        } catch (error) {
+        } catch (error) { 
             chatHistory.push({
                 role: 'glados',
                 text: `ERROR DEL SISTEMA: ${error.message}. Por favor, continúe con la siguiente prueba.`,
                 time: getTimestamp()
             });
-        } finally {
-            // Desbloquear controles, ocultar indicador, guardar persistencia y refrescar vista
+        } finally { // <--- RESTAURADO: Desbloquea la interfaz tras terminar la petición
             chatInput.disabled = false;
             if (submitBtn) submitBtn.disabled = false;
-            chatInput.focus(); // Devolver el foco al campo para comodidad del usuario
+            chatInput.focus();
 
             loadingIndicator.classList.add('hidden');
             saveHistory();
             renderMessages(messagesContainer);
         }
-    });
+    }); // <--- Cierre del addEventListener corregido
 
     // Evento para limpiar el historial de la sesión y almacenamiento
     clearBtn.addEventListener('click', () => {
@@ -149,9 +160,8 @@ function renderMessages(container) {
         const msgElement = document.createElement('div');
         msgElement.classList.add('message', msg.role);
 
-        // Si el mensaje es de GLaDOS, añadimos el botón para copiar respuesta (Extra)
-        const copyButtonHTML = msg.role === 'glados' 
-            ? `<button class="copy-btn" data-text="${msg.text.replace(/"/g, '&quot;')}">Copiar</button>` 
+        const copyButtonHTML = msg.role === 'glados'
+            ? `<button class="copy-btn" data-text="${msg.text.replace(/"/g, '&quot;')}">Copiar</button>`
             : '';
 
         msgElement.innerHTML = `
@@ -162,7 +172,6 @@ function renderMessages(container) {
         container.appendChild(msgElement);
     });
 
-    // Auto-scroll automático al último mensaje
     container.scrollTop = container.scrollHeight;
 }
 
@@ -170,5 +179,4 @@ function renderMessages(container) {
  * Guarda el estado del historial actual en localStorage.
  */
 function saveHistory() {
-    localStorage.setItem('aperture_chat_history', JSON.stringify(chatHistory));
-}
+    localStorage.setItem('aperture_chat_history', JSON.stringify(chatHistory

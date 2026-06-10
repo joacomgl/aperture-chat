@@ -6,15 +6,15 @@ export default async function handler(req, res) {
 
     const { contents } = req.body;
 
-    // Validar que el historial de contenidos venga en la petición
-    if (!contents || !Array.isArray(contents)) {
-        return res.status(400).json({ error: 'Formato de contenido inválido.' });
+    // Validar que el historial de contenidos venga en la petición y sea un arreglo
+    if (!contents || !Array.isArray(contents) || contents.length === 0) {
+        return res.status(400).json({ error: 'Formato de contenido inválido o historial vacío.' });
     }
 
     // Obtener la API Key desde las variables de entorno seguras de Vercel
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-        return res.status(500).json({ error: 'Error de configuración: GEMINI_API_KEY no encontrada en el servidor.' });
+        return res.status(500).json({ error: 'Error de configuración: GEMINI_API_KEY no encontrada en el servidor de Vercel.' });
     }
 
     // Directiva del sistema que define la personalidad cibernética de GLaDOS
@@ -28,6 +28,9 @@ export default async function handler(req, res) {
         // Endpoint oficial de Google Gemini API
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
+        // Filtrar el historial para asegurar que SOLO viajen roles válidos para Gemini ('user' o 'model')
+        const cleanedContents = contents.filter(msg => msg.role === 'user' || msg.role === 'model');
+
         // Realizar la llamada HTTP interna hacia los servidores de Google
         const response = await fetch(apiUrl, {
             method: 'POST',
@@ -35,20 +38,24 @@ export default async function handler(req, res) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                contents: contents,
+                contents: cleanedContents,
                 systemInstruction: systemInstruction
             })
         });
 
+        // Si la API de Google responde con un error, extraemos el mensaje real
         if (!response.ok) {
-            const errorData = await response.json();
-            return res.status(response.status).json({ error: 'Error de comunicación con Gemini AI', details: errorData });
+            const errorData = await response.json().catch(() => ({}));
+            return res.status(response.status).json({ 
+                error: 'Error de comunicación con Gemini AI', 
+                details: errorData.error?.message || errorData 
+            });
         }
 
         const data = await response.json();
         
         // Extraer el texto plano generado por la IA de la estructura de Gemini
-        const gladosReply = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const gladosReply = data.candidates?.[0]?.content?.parts?.[0]?.text || '... [Silencio operativo] ...';
 
         return res.status(200).json({ reply: gladosReply });
 
