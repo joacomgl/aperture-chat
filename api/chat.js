@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     try {
         // ACTUALIZADO: Apuntamos al modelo gemini-2.5-flash (el estándar actual y ultra rápido)
         // usando la versión v1beta de la API oficial
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`;
 
         // Filtrar el historial para asegurar que SOLO viajen roles válidos para Gemini ('user' o 'model')
         const cleanedContents = contents.filter(msg => msg.role === 'user' || msg.role === 'model');
