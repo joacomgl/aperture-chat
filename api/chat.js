@@ -48,8 +48,8 @@ export default async function handler(req, res) {
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             return res.status(response.status).json({ 
-                error: 'Error de comunicación con Gemini AI', 
-                details: errorData.error?.message || errorData 
+                error: errorData.error?.message || 'Error de comunicación con Gemini AI',
+                details: errorData 
             });
         }
 
